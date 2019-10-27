@@ -1,0 +1,733 @@
+<head>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/recorderjs/0.1.0/recorder.js"></script>
+</head>
+<body>
+	<style>
+		:root {
+			--play-button-size: 50px;
+			--progress-bar-length: 400px;
+			font-family: Helvetica;
+			--logo-width: 200px;
+			--control-panel-width: 400px;
+			--cover-height: 350px;
+			--progress-bar-height: 24px;
+			--control-panel-icon-width: 44px;
+			--control-panel-play-width: 50px;
+		}
+
+		.player-page {
+			display: grid;
+			grid-template-columns: var(--control-panel-width) 3fr;
+            height: 100%;
+            border: 0;
+		}
+
+		body {
+			margin: 0 !important;
+		}
+
+		.play-button {
+			border-radius: 50%;
+			background-color: #cd2d25;
+			width: var(--play-button-size);
+			height: var(--play-button-size);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.play-button:hover {
+			background-color: #bb2826;
+			cursor: pointer;
+
+		}
+
+		#playpause-icon {
+			width: calc(var(--play-button-size) * 0.45) !important;
+			height: calc(var(--play-button-size) * 0.45) !important;
+			transition: 5s;
+		}
+
+		.progress-bar {
+			height: calc(var(--progress-bar-height));
+			width: var(--progress-bar-length);
+			background-color: #ecaba8;
+			display: flex;
+			align-items: left;
+			text-align: center;
+			opacity: 0.8;
+			cursor: pointer;
+		}
+
+		.duration {
+			background: transparent;
+			font-size: calc(var(--play-button-size) * 0.2);
+			height: calc(var(--play-button-size) * 0.25);
+			align-self:auto;
+			position: absolute;
+			margin-left: calc(var(--progress-bar-length) - 20px - 10px);
+		}
+
+		.progress {
+			height: calc(var(--progress-bar-height));
+			background-color: white;
+			display: flex;
+			align-items: center;
+			align-self: left;
+			text-align: left;
+			width: 0px;
+
+		}
+
+		.audio-player {
+			display: flex;
+			align-items: center;
+			width: calc(var(--progress-bar-length));
+		}
+
+		.current-time {
+			background: transparent;
+			font-size: calc(var(--play-button-size) * 0.2);
+			height: calc(var(--play-button-size) * 0.25);
+			margin-left: 10px;
+		}
+
+		.audio-player-wrap {
+			display: flex;
+			align-items: center;
+			width: calc(var(--progress-bar-length));
+			position: relative;
+		}
+
+		.player-panel {
+			border: 1px solid #cccccc;
+			border-radius: 5px;
+			width: calc(var(--progress-bar-length));
+			height: calc(var(--play-button-size) * 2);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.control-panel {
+			grid-area: "pan";
+			width: var(--control-panel-width);
+			background-color: #e30411;
+			display: flex;
+			flex-direction: column;
+			box-shadow: 0 0 10px #484848;
+		}
+
+		.lyrics-content {
+		}
+
+		.logo {
+			width: var(--logo-width);
+			margin-top: 34px;
+			margin-bottom: 25px;
+			margin-left: 30px;
+			margin-right: 30px;
+		}
+
+		.album-cover {
+			width: var(--control-panel-width);
+			height: var(--cover-height);
+		}
+
+		.control-panel-icon {
+			width: var(--control-panel-icon-width);
+			height: var(--control-panel-icon-width);
+			cursor: pointer;
+		}
+
+		#playpause {
+			width: var(--control-panel-play-width);
+			height: var(--control-panel-play-width);
+			cursor: pointer;
+		}
+
+		.player-control-panel {
+			display: flex;
+			justify-content: space-between;
+			width: calc(var(--control-panel-width));
+			margin-top: 5px;
+			padding-right: 40px;
+			padding-left: 40px;
+			align-items: center;
+		}
+
+		.karaoke-control-panel {
+			display: flex;
+			justify-content: space-between;
+			width: calc(var(--control-panel-width));
+			margin-top: 5px;
+			padding-right: 40px;
+			padding-left: 40px;
+			align-items: center;
+		}
+
+		.lyrics-line {
+			display: inline-block;
+			font-size: 30px;
+			transition-property: background;
+			transition-duration: 2000ms;
+			transition-timing-function: linear;
+		}
+
+		.lyrics-line-wrapper {
+			display: block;
+		}
+
+		.lyrics-content {
+			margin: 30px;
+		}
+
+		.active-word {
+			background: red;
+			color: white;
+			transition-property: background;
+			transition-duration: 100ms;
+			transition-delay:  5ms;
+			transition-timing-function: linear;
+		}
+
+		.switch {
+		  position: relative;
+		  display: inline-block;
+		  width: 60px;
+		  height: 34px;
+		}
+
+		.switch input { 
+		  opacity: 0;
+		  width: 0;
+		  height: 0;
+		}
+
+		.slider {
+		  position: absolute;
+		  cursor: pointer;
+		  top: 0;
+		  left: 0;
+		  right: 0;
+		  bottom: 0;
+		  background-color: #ccc;
+		  -webkit-transition: .4s;
+		  transition: .4s;
+		}
+
+		.slider:before {
+		  position: absolute;
+		  content: "";
+		  height: 26px;
+		  width: 26px;
+		  left: 4px;
+		  bottom: 4px;
+		  background-color: white;
+		  -webkit-transition: .4s;
+		  transition: .4s;
+		}
+
+		input:checked + .slider {
+		  background-color: #00BCD4;
+		}
+
+		input:focus + .slider {
+		  box-shadow: 0 0 1px #2196F3;
+		}
+
+		input:checked + .slider:before {
+		  -webkit-transform: translateX(26px);
+		  -ms-transform: translateX(26px);
+		  transform: translateX(26px);
+		}
+
+		.slider.round {
+		  border-radius: 34px;
+		}
+
+		.slider.round:before {
+		  border-radius: 50%;
+		}
+
+		.lyrics-content {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			margin-left: 60px;
+		}
+
+		.lyrics-big-line {
+
+		}
+
+		#karaoke-line {
+			font-size: 50px;
+			font-weight: bold;
+			text-align: left;
+			transition-duration: 100ms;
+			transition-delay:  5ms;
+			transition-timing-function: linear;
+			
+			background-size: 200% 100%;
+    		background-image: linear-gradient(to right, white 50%, red 50%);
+    		transition: background-position 2s;
+    		
+		}
+
+		.karaoke-line-highlight {
+			/*animation:  color;
+    		animation-duration: 2s;*/
+    		background-position: 100% 0;
+		}
+
+		.karaoke-line-highlight-init-position {
+			background-position: -100% 0;
+		}
+
+		#next-karaoke-line-1, #next-karaoke-line-2, #previous-karaoke-line {
+			font-size: 25px;
+			transition-duration: 100ms;
+			transition-delay:  5ms;
+			text-align: left;
+			transition-timing-function: linear;
+		}
+
+		#title-wrapper {
+			position: absolute;
+			margin-left: 20px;
+			margin-top: 420px;
+		}
+
+		#author, #song-name {
+			color: white;
+			text-shadow: 2px 1px #484848;
+		}
+
+		#song-name {
+			font-weight:bold;
+		}
+
+		.karaoke-line-red {
+			background-position: 100% 0;
+		}
+
+		.karaoke-line-white {
+			background-position: 200% 100%;
+		}
+
+		@keyframes color {
+			0% {background-position: 200% 0;}
+		   100% {background-position: -100% 0}
+		}
+
+		@keyframes size {
+			0% {background-position: 200% 0;}
+		   100% {background-position: -100% 0}
+		}
+
+		#karaoke-control-panel {
+			height: 60px;
+			margin-top: 30px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		#mic-icon {
+			height: 60px;
+			width: 60px;
+			margin: 7px;
+		}
+
+		#mic-icon:click {
+			height: 60px;
+			width: 60px;
+		}
+
+		#record-button {
+			border: 3px solid white;
+			border-radius: 50%;
+			height: 80px;
+			width: 80px;
+			cursor: pointer;
+		}
+	</style>
+		<div id="player-page" class="player-page">
+			<div id="control-panel" class="control-panel">
+				<img id="logo" class="logo" src="assets/mts_music.png">
+				<div id="title-wrapper">
+					<div id="song-name">Thunder</div>
+					<div id="author">Imagine Dragons</div>
+				</div>
+				<img id="album-cover" class="album-cover" src="assets/imagine_cover.jpg">
+				<span id="audio-player-wrap" class="audio-player-wrap">
+					<span id="audio-player" class="audio-player">
+						<span id="progress-bar" class="progress-bar">
+							<span id="progress" class="progress">
+								<span id="current-time" class="current-time">0:00
+								</span>
+							</span>
+						</span>
+					</span>
+					<span id="duration" class="duration"></span>
+				</span>
+				<div id="player-conrol-panel" class="player-control-panel">
+					<img id="backward" class="control-panel-icon" src='assets/backward.png'>
+					<img id="playpause" class="control-panel-icon" src='assets/play.png'>
+					<img id="forward" class="control-panel-icon" src='assets/forward.png'>
+				</div>
+				<div id="karaoke-control-panel">
+					<span id="record-button" class="record-button">
+						<img id="mic-icon" class="mic-icon" src='assets/mic.png'>
+					</span>
+				</div>
+			</div>
+			<div id="lyrics-content" class="lyrics-content">
+				<div id="previous-karaoke-line"></div>
+				<div id="karaoke-line" class="karaoke-line karaoke-line-white"></div>
+				<div id="next-karaoke-line-1" class="karaoke-line"></div>
+				<div id="next-karaoke-line-2" class="karaoke-line"></div>
+				<div id="links"></div>
+			</div>
+		</div>
+	<script>
+		var author = "Halestorm";
+		var song = "Rock Show";
+		var player_state = 'pause';
+		var audio = new Audio("http://34.65.196.207:5000/get_song_full?author=" + author + "&song=" + song);
+		var audio_minus = new Audio("http://34.65.196.207:5000/get_song_minus?author=" + author + "&song=" + song);
+		var duration = audio.duration;
+		var current_time = 0
+		var play_event = new CustomEvent("play");
+		var pause_event = new CustomEvent("pause");
+
+		var gumStream;
+		//stream from getUserMedia() 
+		var rec;
+		//Recorder.js object 
+		var input;
+		//MediaStreamAudioSourceNode we'll be recording 
+		// shim for AudioContext when it's not avb. 
+		var AudioContext = window.AudioContext || window.webkitAudioContext;
+
+		///////////recording//////////////////////////////////////////////////////
+		var constraints = {
+		    audio: true,
+		    video: false
+		};
+
+		var recording_state = "stop";
+
+		$('#record-button').on('click', function() {
+			if (recording_state == "stop") {
+				recording_state = "recording";
+				startRecording();
+			}
+			else {
+				stopRecording();
+				recording_state = "stop";
+			}
+		});
+
+
+		function stopRecording() {
+		    console.log("stopButton clicked");
+		    //tell the recorder to stop the recording 
+		    rec.stop(); //stop microphone access 
+		    gumStream.getAudioTracks()[0].stop();
+		    //create the wav blob and pass it on to createDownloadLink 
+		    rec.exportWAV(createDownloadLink);
+		}
+
+		function createDownloadLink(blob) {
+		    var url = URL.createObjectURL(blob);
+		    var link = document.createElement('a');
+		    //link the a element to the blob 
+		    link.href = url;
+		    link.download = new Date().toISOString() + '.wav';
+		    link.innerHTML = link.download;
+		    //add the new audio and a elements to the li element 
+		    links = document.getElementById("links");
+		    links.appendChild(link);
+		    link.click();
+		    console.log(url);
+		    links.removeChild(link);
+		    delete link;
+		}
+
+		function startRecording() {
+			var audioContext = new AudioContext;
+			navigator.getUserMedia(constraints, function(stream) {
+				console.log("getUserMedia() success, stream created, initializing Recorder.js ..."); 
+			    // assign to gumStream for later use 
+			    gumStream = stream;
+			    // use the stream */
+			    input = audioContext.createMediaStreamSource(stream);
+			    rec = new Recorder(input, {
+			        numChannels: 1
+			    }) 
+			    //start the recording process 
+			    rec.record()
+			    console.log("Recording started");
+			}, function() {});
+		}
+
+		audio.addEventListener('ended', function() {
+			player_state = "pause";
+			$('#playpause').trigger('pause');
+			$('#playpause').attr('src', 'assets/play.png');
+		});
+
+
+		audio.addEventListener('loadedmetadata', function() {
+        	$("#duration").text(parseInt(audio.duration / 60) + ':' +
+				parseInt(audio.duration % 60 / 10) + parseInt(audio.duration % 60 % 10));
+		});
+
+		$("#forward").on('click', function() {
+			audio.pause();
+			$('#playpause').trigger('pause');
+			player_state = "pause";
+			audio.currentTime = audio.currentTime + 10;
+			$('#progress').width($("#progress-bar").width() * audio.currentTime / audio.duration);
+			player_state = 'play';
+			$('#playpause').trigger('play');
+			audio.play();
+		});
+
+		$("#backward").on('click', function() {
+			audio.pause();
+			$('#playpause').trigger('pause');
+			player_state = "pause";
+			audio.currentTime = audio.currentTime - 10;
+			$('#progress').width($("#progress-bar").width() * audio.currentTime / audio.duration);
+			player_state = 'play';
+			$('#playpause').trigger('play');
+			audio.play();
+		});
+
+
+		audio.addEventListener('timeupdate',function (){
+			if (player_state == "pause") {
+				return;
+			}
+			console.log('updated');
+			current_time = parseInt(audio.currentTime, 10);
+			$("#current-time").text(parseInt(current_time / 60) + ':' +
+				parseInt(current_time % 60 / 10) + parseInt(current_time % 60 % 10));
+			$('#progress').width($("#progress-bar").width() * audio.currentTime / audio.duration);
+		});
+
+		$('#playpause').on('click', function(e) {
+			audio.pause();
+			$('#playpause').trigger('pause');
+			if (player_state == 'play') {
+				$('#playpause').attr('src', 'assets/play.png');
+				$('#playpause').trigger('pause');
+				player_state = 'pause';
+				audio.pause();
+			}
+			else {
+				console.log("pause icon");
+				$('#playpause').attr('src', 'assets/pause.png');
+				$('#playpause').trigger('play');
+				player_state = 'play';
+				$('#playpause').trigger('play');
+				audio.play();
+			}
+		});
+
+		$("#progress-bar").click(function (e) {
+			audio.pause();
+			$('#playpause').trigger('pause');
+			player_state = "pause";
+			$('#progress').width(e.offsetX);
+			console.log("before " + audio.currentTime);
+			audio.currentTime = audio.duration * $("#progress").width() / $("#progress-bar").width();
+			var new_time = audio.duration * $("#progress").width() / $("#progress-bar").width();
+			audio.currentTime = new_time;
+			$("#current-time").text(parseInt(new_time / 60) + ':' +
+			parseInt(new_time % 60 / 10) + parseInt(new_time % 60 % 10));
+			console.log("after " + audio.currentTime);
+			player_state = "play";
+			$('#playpause').trigger('play');
+			audio.play();
+		});
+
+		$("#progress-bar").mousedown(function (down) {
+			audio.pause();
+			$('#playpause').trigger('pause');
+			player_state = 'pause';
+			$('#progress').width(down.offsetX);
+			$(this).mousemove(function(move) {
+				$('#progress').width(move.offsetX);
+				var new_time = audio.duration * $("#progress").width() / $("#progress-bar").width()
+				$("#current-time").text(parseInt(new_time / 60) + ':' +
+				parseInt(new_time % 60 / 10) + parseInt(new_time % 60 % 10));
+			});
+		}).mouseup(function (up) {
+			$(this).unbind("mousemove");
+			audio.currentTime = audio.duration * $("#progress").width() / $("#progress-bar").width();
+			current_time = parseInt(audio.currentTime, 10);
+			$("#current-time").text(parseInt(current_time / 60) + ':' +
+				parseInt(current_time % 60 / 10) + parseInt(current_time % 60 % 10));
+			player_state = 'play'
+			$('#playpause').trigger('play');
+			audio.play();
+			//$(document).unbind("mousemove");
+		});
+
+		////////////////////////////////////////////////////lyrics////////////////////////////////////
+
+		function activateLine(idx, activated_lines, lines, ms_length) {
+			document.getElementById("karaoke-line").classList.remove('karaoke-line-white');
+			$("#karaoke-line").css('transition', 'background-position ' + ms_length / 2 + 'ms');
+			document.getElementById("karaoke-line").classList.add('karaoke-line-red');
+
+			document.getElementById("previous-karaoke-line").innerHTML = lines[0];
+			document.getElementById("karaoke-line").innerHTML = lines[1];
+			document.getElementById("next-karaoke-line-1").innerHTML = lines[2];
+			document.getElementById("next-karaoke-line-2").innerHTML = lines[3];
+			timer = window.setTimeout(() => {
+				document.getElementById("karaoke-line").classList.remove('karaoke-line-red');
+				$("#karaoke-line").css('transition', 'background-position ' + 0 + 'ms');
+				document.getElementById("karaoke-line").classList.add('karaoke-line-white');
+			}, 2000);
+		}
+
+		function deactivateWord(idx, activated_lines) {
+			console.log("deactivate");
+			document.getElementById("karaoke-line").classList.remove('karaoke-line-red');
+			document.getElementById("karaoke-line").classList.add('karaoke-line-white');
+
+			document.getElementById("previous-karaoke-line").innerHTML = "";
+			document.getElementById("karaoke-line").innerHTML = "";
+			document.getElementById("next-karaoke-line-1").innerHTML = "";
+			document.getElementById("next-karaoke-line-2").innerHTML = "";
+		}
+		/*
+		function getLines(json, word_timing) {
+			if (word_timing == 0) {
+				return ["", json["words"][0]["word"], json["words"][1]["word"], json["words"][2]["word"]];
+			}
+			else if (word_timing == json["words"].length - 1) {
+				return [json["words"][json["words"].length - 2]["word"], json["words"][json["words"].length - 1]["word"], "", ""];
+			}
+			else if (word_timing == json["words"].length - 2) {
+				return [json["words"][json["words"].length - 3]["word"], json["words"][json["words"].length - 2]["word"],
+				json["words"][json["words"].length - 1]["word"], ""];
+			}
+			else {
+				console.log(word_timing);
+				return [json["words"][parseInt(word_timing) - 1]["word"], json["words"][word_timing]["word"], json["words"][parseInt(word_timing) + 1]["word"], json["words"][parseInt(word_timing) + 2]["word"]];
+			}
+		}
+
+		function startLyrics(json, audio_current_time, timers, activated_words) {
+			console.log(audio_current_time);
+			for (word_timings_idx in json["words"]) {
+				var word_timing = json["words"][word_timings_idx];
+				if (word_timing["start"] > audio_current_time) {
+					var ms_start = (word_timing["start"] - audio_current_time) * 1000;
+					var ms_end = (word_timing["end"] - audio_current_time) * 1000;
+					var ms_length = ms_end - ms_start;
+					console.log(ms_end - ms_start);
+
+					var lines = getLines(json, word_timings_idx);
+					console.log(lines);
+
+					var activate_timer = window.setTimeout(activateLine.bind(this, word_timings_idx, activated_words, lines, ms_length), ms_start);
+					timers.push(activate_timer);
+					var deactivate_timer = window.setTimeout(deactivateWord.bind(this, word_timings_idx, activated_words), ms_end);
+					timers.push(deactivate_timer);
+
+				}
+			}
+		}
+		*/
+
+		function getLines(json, word_timing) {
+			if (word_timing == 0) {
+				return ["", json[0][2], json[1][2], json[2][2]];
+			}
+			else if (word_timing == json.length - 1) {
+				return [json[json.length - 2][2], json[json.length - 1][2], "", ""];
+			}
+			else if (word_timing == json.length - 2) {
+				return [json[json.length - 3][2], json[json.length - 2][2],
+				json[json.length - 1][2], ""];
+			}
+			else {
+				return [json[parseInt(word_timing) - 1][2], json[word_timing][2], json[parseInt(word_timing) + 1][2], json[parseInt(word_timing) + 2][2]];
+			}
+		}
+
+		function startLyrics(json, audio_current_time, timers, activated_words) {
+			for (word_timings_idx in json) {
+				var word_timing = json[word_timings_idx];
+				if (word_timing[0] > audio_current_time) {
+					var ms_start = (word_timing[0] - audio_current_time) * 1000;
+					var ms_end = (word_timing[1] - audio_current_time) * 1000;
+					var ms_length = ms_end - ms_start;
+
+					var lines = getLines(json, word_timings_idx);
+
+					var activate_timer = window.setTimeout(activateLine.bind(this, word_timings_idx, activated_words, lines, ms_length), ms_start);
+					timers.push(activate_timer);
+					var deactivate_timer = window.setTimeout(deactivateWord.bind(this, word_timings_idx, activated_words), ms_end);
+					timers.push(deactivate_timer);
+					var deactivate_timer = window.setTimeout(deactivateWord.bind(this, word_timings_idx, activated_words), ms_end);
+					timers.push(deactivate_timer);
+
+				}
+			}
+		}
+		/*
+		loadJSON(function(response) {
+			//json from response renders here
+			var json = JSON.parse(response);
+			var timers = [];
+			var activated_words = [];
+			$("#playpause").on('play', (event) => {
+				var audio_current_time = audio.currentTime;
+			  	startLyrics(json, audio_current_time, timers, activated_words);
+			});
+			$("#playpause").on('pause', (event) => {
+			  var audio_current_time = event.target.currentTime;
+			  timers.map((timer) => clearTimeout(timer));
+			  activated_words.map((idx) => deactivateWord(idx, activated_words));
+			  activated_words = [];
+			  timers = []
+			});
+		});
+		*/
+		function bindKaraoke(json) {
+			var timers = [];
+			var activated_words = [];
+			$("#playpause").on('play', (event) => {
+				var audio_current_time = audio.currentTime;
+			  	startLyrics(json, audio_current_time, timers, activated_words);
+			});
+			$("#playpause").on('pause', (event) => {
+			  var audio_current_time = event.target.currentTime;
+			  timers.map((timer) => clearTimeout(timer));
+			  activated_words.map((idx) => deactivateWord(idx, activated_words));
+			  activated_words = [];
+			  timers = []
+			});
+		};
+
+		ready();
+
+		function ready() {
+				$.getJSON("http://34.65.196.207:5000/get_song_lyrics", { author: author, song: song })
+				.done(function (data) {
+				console.log("SOmething");
+					console.log(data);
+					bindKaraoke(data);
+				});
+		}
+	</script>
+</body>
